@@ -1,11 +1,20 @@
+import { useEffect, useRef, useState } from 'react'
+import { categories, defaultTools } from './data/aiTools'
+import { enhancers, promptTemplates } from './data/promptTemplates'
+import { appendEnhancers, applyTemplate, getLaunchUrl } from './utils/prompt'
+import { getStoredValue, setStoredValue } from './utils/storage'
+import Sidebar from './Sidebar'
+
+const flip = (id, set) => set((all) => all.includes(id) ? all.filter((x) => x !== id) : [...all, id])
+function Tool({ tool, favorites, selected, launch, setFavorites, setSelected }) {
+  return <article className="card relative p-4"><button onClick={() => flip(tool.id, setFavorites)} className={`absolute right-3 top-3 ${favorites.includes(tool.id) ? 'text-amber-300' : 'text-zinc-600'}`}>★</button><button className="w-full text-left" onClick={() => launch(tool)}><span className={`mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br text-xs font-black text-zinc-950 ${tool.accent}`}>{tool.icon}</span><strong className="block">{tool.name}</strong><span className="text-xs text-zinc-500">{tool.category}</span></button><label className="mt-4 flex gap-2 text-xs text-zinc-400"><input type="checkbox" checked={selected.includes(tool.id)} onChange={() => flip(tool.id, setSelected)} />Multi-send</label></article>
+}
+
 export default function App() {
-  return (
-    <main className="min-h-screen bg-zinc-950 px-6 py-16 text-zinc-100">
-      <section className="mx-auto max-w-4xl">
-        <p className="mb-3 text-sm font-semibold uppercase tracking-[0.2em] text-violet-400">Lazy Dev</p>
-        <h1 className="text-5xl font-black tracking-tight">One prompt. Every AI.</h1>
-        <p className="mt-4 text-lg text-zinc-400">Your shortcut hub is loading.</p>
-      </section>
-    </main>
-  )
+  const ref = useRef(null); const [prompt, setPrompt] = useState(''); const [category, setCategory] = useState('All'); const [favorites, setFavorites] = useState(() => getStoredValue('favorites', [])); const [history, setHistory] = useState(() => getStoredValue('history', [])); const [custom, setCustom] = useState(() => getStoredValue('tools', [])); const [selected, setSelected] = useState([]); const [extras, setExtras] = useState([]); const [notice, setNotice] = useState('')
+  const tools = [...defaultTools, ...custom]; const output = appendEnhancers(prompt, extras); const visible = tools.filter((tool) => category === 'All' || tool.category === category)
+  useEffect(() => { setStoredValue('favorites', favorites) }, [favorites]); useEffect(() => { setStoredValue('history', history) }, [history]); useEffect(() => { setStoredValue('tools', custom) }, [custom]); useEffect(() => { const fn = (e) => { if (e.key === '/' && document.activeElement?.tagName !== 'TEXTAREA') { e.preventDefault(); ref.current?.focus() } }; addEventListener('keydown', fn); return () => removeEventListener('keydown', fn) }, [])
+  async function launch(tool) { if (!output) { setNotice('Write a prompt first.'); return ref.current?.focus() }; setHistory((all) => [output, ...all.filter((x) => x !== output)].slice(0, 20)); if (!tool.promptUrl) { try { await navigator.clipboard.writeText(output) } catch {} ; setNotice(`Prompt copied. Paste it into ${tool.name}.`) } else setNotice(`Opening ${tool.name}.`); open(getLaunchUrl(tool, output), '_blank', 'noopener,noreferrer') }
+  function multi() { const targets = tools.filter((tool) => selected.includes(tool.id)); if (!targets.length) return setNotice('Select tools for Multi-send first.'); targets.forEach(launch) }
+  return <main className="min-h-screen bg-zinc-950 text-zinc-100"><section className="mx-auto max-w-6xl px-5 py-10"><header className="mb-10"><p className="text-xs font-black uppercase tracking-[.25em] text-violet-400">Lazy Dev</p><h1 className="mt-2 text-4xl font-black">One prompt. Every AI.</h1></header><section className="card p-5"><label className="mb-2 block text-sm font-bold">What do you need?</label><textarea ref={ref} value={prompt} onChange={(e) => setPrompt(e.target.value)} rows="4" placeholder="Ask once, then launch anywhere..." className="control w-full" /><div className="mt-4 flex gap-3"><button className="button bg-violet-500 text-white" onClick={multi}>Send selected ({selected.length})</button><span className="py-2 text-xs text-zinc-500">Press / to write</span></div>{notice && <p role="status" className="mt-3 text-sm text-violet-300">{notice}</p>}</section><section className="mt-8 grid gap-6 lg:grid-cols-[1fr_280px]"><div><div className="mb-4 flex flex-wrap gap-2">{['All', ...categories, 'Custom'].map((x) => <button key={x} onClick={() => setCategory(x)} className={`rounded-full px-3 py-1.5 text-sm ${category === x ? 'bg-violet-500' : 'bg-zinc-800 text-zinc-400'}`}>{x}</button>)}</div><div className="grid grid-cols-2 gap-3 sm:grid-cols-3">{visible.map((tool) => <Tool key={tool.id} tool={tool} favorites={favorites} selected={selected} launch={launch} setFavorites={setFavorites} setSelected={setSelected} />)}</div><h2 className="mb-3 mt-8 text-lg font-black">Prompt templates</h2><div className="grid gap-2 sm:grid-cols-2">{promptTemplates.map((x) => <button key={x.id} onClick={() => setPrompt((v) => applyTemplate(x.template, v))} className="card p-4 text-left"><strong>{x.title}</strong><span className="ml-2 text-xs text-zinc-500">{x.category}</span></button>)}</div></div><Sidebar history={history} setPrompt={setPrompt} extras={extras} setExtras={setExtras} enhancers={enhancers} custom={custom} setCustom={setCustom} setNotice={setNotice} /></section></section></main>
 }
