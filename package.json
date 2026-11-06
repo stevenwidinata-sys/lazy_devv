@@ -1,0 +1,21 @@
+{
+  "name": "lazy-dev",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "test": "node src/utils/prompt.test.mjs"
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "latest",
+    "vite": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "tailwindcss": "3.4.17",
+    "postcss": "latest",
+    "autoprefixer": "latest"
+  },
+  "devDependencies": {}
+}
