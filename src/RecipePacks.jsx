@@ -9,8 +9,10 @@ export default function RecipePacks({
   );
 
   return (
-    <section className="mb-8">
-      <h2 className="mb-3 text-lg font-black">Workspace packs</h2>
+    <details className="mb-8">
+      <summary className="cursor-pointer text-lg font-black">
+        Workspace packs
+      </summary>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {recipes.map((recipe) => (
           <button
@@ -45,6 +47,6 @@ export default function RecipePacks({
           </div>
         </div>
       )}
-    </section>
+    </details>
   );
 }

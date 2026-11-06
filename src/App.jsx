@@ -1,24 +1,25 @@
 import { useEffect, useRef, useState } from "react";
 import CommandBar from "./CommandBar";
+import PromptComposer from "./PromptComposer";
 import RecipePacks from "./RecipePacks";
 import Sidebar from "./Sidebar";
-import { categories, defaultTools } from "./data/aiTools";
+import { defaultTools } from "./data/aiTools";
 import { enhancers, promptTemplates } from "./data/promptTemplates";
 import { recipes } from "./data/recipes";
 import { validateCatalog } from "./utils/catalog";
 import { historyEntry, prepareLaunch } from "./utils/launcher";
-import { appendEnhancers, applyTemplate } from "./utils/prompt";
+import { appendEnhancers } from "./utils/prompt";
 import { getStoredValue, setStoredValue } from "./utils/storage";
 
-const flip = (id, set) =>
-  set((all) => (all.includes(id) ? all.filter((x) => x !== id) : [...all, id]));
-function Tool({ tool, favorites, launch, setFavorites }) {
+const isPromptTool = (tool) =>
+  ["AI", "Search", "Code", "Image"].includes(tool.category);
+function Card({ tool, favorite, favoriteTool, launch }) {
   return (
     <article className="card relative p-4">
       <button
         aria-label={`Favorite ${tool.name}`}
-        onClick={() => flip(tool.id, setFavorites)}
-        className={`absolute right-3 top-3 text-lg ${favorites.includes(tool.id) ? "text-amber-300" : "text-muted"}`}
+        onClick={() => favoriteTool(tool.id)}
+        className={`absolute right-3 top-3 text-lg ${favorite ? "text-amber-300" : "text-muted"}`}
       >
         ★
       </button>
@@ -29,8 +30,15 @@ function Tool({ tool, favorites, launch, setFavorites }) {
           {tool.icon}
         </span>
         <strong className="block">{tool.name}</strong>
-        <span className="text-xs text-muted">
-          {tool.category} · {tool.promptUrl ? "Deep link" : "Copy + paste"}
+        <span
+          title={
+            tool.promptUrl
+              ? "Prompt opens in tool"
+              : "Prompt copies before opening"
+          }
+          className="text-xs text-muted"
+        >
+          {tool.promptUrl ? "↗ Deep link" : "⧉ Copy + paste"}
         </span>
       </button>
     </article>
@@ -39,7 +47,8 @@ function Tool({ tool, favorites, launch, setFavorites }) {
 export default function App() {
   const ref = useRef(null);
   const [prompt, setPrompt] = useState("");
-  const [category, setCategory] = useState("All");
+  const [template, setTemplate] = useState(null);
+  const [extras, setExtras] = useState([]);
   const [favorites, setFavorites] = useState(() =>
     getStoredValue("favorites", []),
   );
@@ -49,15 +58,20 @@ export default function App() {
     ),
   );
   const [custom, setCustom] = useState(() => getStoredValue("tools", []));
-  const [extras, setExtras] = useState([]);
   const [notice, setNotice] = useState("");
   const [theme, setTheme] = useState(() => getStoredValue("theme", "dark"));
   const [recipe, setRecipe] = useState(null);
   const tools = [...defaultTools, ...custom];
-  const output = appendEnhancers(prompt, extras);
-  const visible = tools.filter(
-    (tool) => category === "All" || tool.category === category,
-  );
+  const base = template
+    ? template.template.replace(
+        "{input}",
+        prompt || "[paste your content here]",
+      )
+    : prompt;
+  const output = appendEnhancers(base, extras);
+  const promptTools = tools.filter(isPromptTool);
+  const apps = tools.filter((tool) => !isPromptTool(tool));
+  const pinned = tools.filter((tool) => favorites.includes(tool.id));
   validateCatalog(defaultTools, recipes);
   useEffect(() => {
     setStoredValue("favorites", favorites);
@@ -75,6 +89,17 @@ export default function App() {
     window.addEventListener("keydown", fn);
     return () => window.removeEventListener("keydown", fn);
   }, []);
+  useEffect(() => {
+    if (!notice) return;
+    const id = window.setTimeout(() => setNotice(""), 3500);
+    return () => window.clearTimeout(id);
+  }, [notice]);
+  const favoriteTool = (id) =>
+    setFavorites((all) =>
+      all.includes(id) ? all.filter((x) => x !== id) : [...all, id],
+    );
+  const openApp = (tool) =>
+    window.open(tool.url, "_blank", "noopener,noreferrer");
   async function launch(tool) {
     if (!output) {
       setNotice("Write a prompt first.");
@@ -91,17 +116,38 @@ export default function App() {
       result.mode === "paste"
         ? `Prompt copied. Paste it into ${tool.name}.`
         : result.mode === "paste-error"
-          ? `Could not copy prompt. Copy it manually before opening ${tool.name}.`
-          : `Opening ${tool.name} with your prompt.`,
+          ? "Could not copy prompt."
+          : `Opening ${tool.name}.`,
     );
     window.open(result.url, "_blank", "noopener,noreferrer");
   }
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(output);
+      setNotice("Prompt copied.");
+    } catch {
+      setNotice("Could not copy prompt.");
+    }
+  }
+  const grid = (list, action) => (
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      {list.map((tool) => (
+        <Card
+          key={tool.id}
+          tool={tool}
+          favorite={favorites.includes(tool.id)}
+          favoriteTool={favoriteTool}
+          launch={action}
+        />
+      ))}
+    </div>
+  );
   return (
     <main
       className={`app-page ${theme === "dark" ? "theme-dark" : "theme-light"} min-h-screen`}
     >
       <section className="mx-auto max-w-6xl px-5 py-10">
-        <header className="mb-10 flex justify-between">
+        <header className="mb-6 flex justify-between">
           <div>
             <p className="text-xs font-black uppercase tracking-[.25em] text-violet-400">
               Lazy Dev
@@ -115,91 +161,68 @@ export default function App() {
             {theme === "dark" ? "☀ Light" : "◐ Dark"}
           </button>
         </header>
-        <CommandBar
-          tools={tools}
-          recipes={recipes}
-          onOpenTool={(tool) =>
-            window.open(tool.url, "_blank", "noopener,noreferrer")
-          }
-          onOpenRecipe={setRecipe}
+        <PromptComposer
+          prompt={prompt}
+          setPrompt={setPrompt}
+          activeTemplate={template}
+          setActiveTemplate={setTemplate}
+          extras={extras}
+          setExtras={setExtras}
+          templates={promptTemplates}
+          enhancers={enhancers}
+          onCopy={copy}
+          onClear={() => {
+            setPrompt("");
+            setTemplate(null);
+            setExtras([]);
+          }}
         />
-        <RecipePacks
-          recipes={recipes}
-          tools={tools}
-          activeRecipe={recipe}
-          setActiveRecipe={setRecipe}
-        />
-        <section className="card p-5">
-          <label className="mb-2 block text-sm font-bold">
-            What do you need?
-          </label>
-          <textarea
-            ref={ref}
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            rows="4"
-            placeholder="Ask once, then launch anywhere..."
-            className="control w-full"
+        <section className="mt-8">
+          <h2 className="mb-3 text-lg font-black">Send prompt to AI</h2>
+          {grid(promptTools, launch)}
+        </section>
+        {pinned.length > 0 && (
+          <section className="mt-8">
+            <h2 className="mb-3 text-lg font-black">Favorites</h2>
+            {grid(pinned, (tool) =>
+              isPromptTool(tool) ? launch(tool) : openApp(tool),
+            )}
+          </section>
+        )}
+        <section className="mt-8">
+          <h2 className="mb-3 text-lg font-black">Just open app</h2>
+          {grid(apps, openApp)}
+        </section>
+        <div className="mt-8">
+          <CommandBar
+            tools={tools}
+            recipes={recipes}
+            onOpenTool={openApp}
+            onOpenRecipe={setRecipe}
           />
-          <p className="mt-2 text-xs text-muted">
-            Deep link opens with prompt. Copy + paste copies prompt before
-            opening tool.
+          <RecipePacks
+            recipes={recipes}
+            tools={tools}
+            activeRecipe={recipe}
+            setActiveRecipe={setRecipe}
+          />
+        </div>
+        <Sidebar
+          history={history}
+          setPrompt={setPrompt}
+          setHistory={setHistory}
+          custom={custom}
+          setCustom={setCustom}
+          setNotice={setNotice}
+        />
+        {notice && (
+          <p
+            role="status"
+            className="fixed bottom-5 right-5 rounded-xl bg-violet-600 px-4 py-3 text-sm text-white shadow-lg"
+          >
+            {notice}
           </p>
-          {notice && (
-            <p role="status" className="mt-3 text-sm text-violet-500">
-              {notice}
-            </p>
-          )}
-        </section>
-        <section className="mt-8 grid gap-6 lg:grid-cols-[1fr_280px]">
-          <div>
-            <div className="mb-4 flex flex-wrap gap-2">
-              {["All", ...categories, "Custom"].map((x) => (
-                <button
-                  key={x}
-                  onClick={() => setCategory(x)}
-                  className={`rounded-full px-3 py-1.5 text-sm ${category === x ? "bg-violet-500 text-white" : "bg-surface-2"}`}
-                >
-                  {x}
-                </button>
-              ))}
-            </div>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-              {visible.map((tool) => (
-                <Tool
-                  key={tool.id}
-                  tool={tool}
-                  favorites={favorites}
-                  launch={launch}
-                  setFavorites={setFavorites}
-                />
-              ))}
-            </div>
-            <h2 className="mb-3 mt-8 text-lg font-black">Prompt templates</h2>
-            <div className="grid gap-2 sm:grid-cols-2">
-              {promptTemplates.map((x) => (
-                <button
-                  key={x.id}
-                  onClick={() => setPrompt((v) => applyTemplate(x.template, v))}
-                  className="card p-4 text-left"
-                >
-                  <strong>{x.title}</strong>
-                  <span className="ml-2 text-xs text-muted">{x.category}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-          <Sidebar
-            history={history}
-            setPrompt={setPrompt}
-            extras={extras}
-            setExtras={setExtras}
-            enhancers={enhancers}
-            custom={custom}
-            setCustom={setCustom}
-            setNotice={setNotice}
-          />
-        </section>
+        )}
       </section>
     </main>
   );

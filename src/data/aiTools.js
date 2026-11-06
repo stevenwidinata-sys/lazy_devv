@@ -1,15 +1,4 @@
-export const categories = [
-  "AI",
-  "Search",
-  "Code",
-  "Image",
-  "Design",
-  "Presentation",
-  "Work",
-  "Learning",
-  "Social",
-  "Browser",
-];
+export const categories = ["AI", "Create", "Work", "Learn", "Web"];
 
 const chatgptUrl = (prompt) => `https://chatgpt.com/?q=${prompt}`;
 const perplexityUrl = (prompt) =>

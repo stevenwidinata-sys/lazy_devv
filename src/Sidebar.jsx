@@ -4,18 +4,11 @@ import { isHttpUrl } from "./utils/prompt";
 export default function Sidebar({
   history,
   setPrompt,
-  extras,
-  setExtras,
-  enhancers,
   custom,
   setCustom,
   setNotice,
 }) {
   const [form, setForm] = useState({ name: "", url: "" });
-  const toggle = (item) =>
-    setExtras((all) =>
-      all.includes(item) ? all.filter((x) => x !== item) : [...all, item],
-    );
   function add(event) {
     event.preventDefault();
     if (!form.name.trim() || !isHttpUrl(form.url))
@@ -37,29 +30,33 @@ export default function Sidebar({
   return (
     <aside className="space-y-6">
       <section className="card p-4">
-        <h2 className="font-black">Prompt enhancer</h2>
-        {enhancers.map((item) => (
-          <label className="mt-3 flex gap-2 text-sm text-zinc-400" key={item}>
-            <input
-              type="checkbox"
-              checked={extras.includes(item)}
-              onChange={() => toggle(item)}
-            />
-            {item}
-          </label>
-        ))}
-      </section>
-      <section className="card p-4">
         <h2 className="font-black">Recent prompts</h2>
         {history.length ? (
           history.slice(0, 5).map((item) => (
-            <button
-              onClick={() => setPrompt(item.text)}
-              className="mt-3 block w-full truncate text-left text-sm text-muted"
-              key={item.id}
-            >
-              {item.text}
-            </button>
+            <div className="mt-3 flex gap-2 text-sm text-muted" key={item.id}>
+              <button
+                onClick={() => setPrompt(item.text)}
+                className="min-w-0 flex-1 truncate text-left"
+              >
+                <span>{item.text}</span>
+                <span className="ml-2 text-xs">
+                  {new Date(item.id.split("-")[0]).toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </span>
+              </button>
+              <button
+                aria-label="Delete prompt"
+                onClick={() =>
+                  setHistory((all) =>
+                    all.filter((entry) => entry.id !== item.id),
+                  )
+                }
+              >
+                ×
+              </button>
+            </div>
           ))
         ) : (
           <p className="mt-3 text-sm text-zinc-500">
