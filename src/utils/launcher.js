@@ -19,5 +19,6 @@ export function historyEntry(prompt) {
   return {
     id: globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`,
     text: prompt,
+    createdAt: Date.now(),
   };
 }

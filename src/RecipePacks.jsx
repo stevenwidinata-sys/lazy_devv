@@ -1,19 +1,28 @@
+import { useEffect, useRef } from "react";
+
 export default function RecipePacks({
   recipes,
   tools,
   activeRecipe,
   setActiveRecipe,
 }) {
-  const activeTools = tools.filter((tool) =>
-    activeRecipe?.apps.includes(tool.id),
-  );
+  const ref = useRef(null);
+  const activeTools = (activeRecipe?.apps || [])
+    .map((id) => tools.find((tool) => tool.id === id))
+    .filter(Boolean);
+
+  useEffect(() => {
+    if (!activeRecipe || !ref.current) return;
+    ref.current.open = true;
+    ref.current.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [activeRecipe]);
 
   return (
-    <details className="mb-8">
+    <details ref={ref} className="mb-8">
       <summary className="cursor-pointer text-lg font-black">
         Workspace packs
       </summary>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {recipes.map((recipe) => (
           <button
             key={recipe.id}

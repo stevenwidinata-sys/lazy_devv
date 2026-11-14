@@ -24,6 +24,8 @@ export function searchCatalog(query, tools, recipes) {
         .includes(text),
     )
     .map((item) => ({ type: "app", item }));
+  const strong = (recipe) =>
+    [recipe.title, ...recipe.aliases].join(" ").toLowerCase().includes(text);
   const packs = recipes
     .filter((recipe) =>
       [recipe.title, recipe.description, ...recipe.aliases]
@@ -31,6 +33,7 @@ export function searchCatalog(query, tools, recipes) {
         .toLowerCase()
         .includes(text),
     )
+    .sort((a, b) => strong(b) - strong(a))
     .map((item) => ({ type: "recipe", item }));
   return [...packs, ...apps].slice(0, 10);
 }

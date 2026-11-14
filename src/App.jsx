@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import BrandIcon from "./BrandIcon";
 import CommandBar from "./CommandBar";
 import PromptComposer from "./PromptComposer";
 import RecipePacks from "./RecipePacks";
@@ -12,8 +13,9 @@ import { appendEnhancers } from "./utils/prompt";
 import { getStoredValue, setStoredValue } from "./utils/storage";
 
 const isPromptTool = (tool) =>
-  ["AI", "Search", "Code", "Image"].includes(tool.category);
+  ["AI", "Search", "Code", "Image", "Custom"].includes(tool.category);
 function Card({ tool, favorite, favoriteTool, launch }) {
+  const sendsPrompt = isPromptTool(tool);
   return (
     <article className="card relative p-4">
       <button
@@ -24,22 +26,22 @@ function Card({ tool, favorite, favoriteTool, launch }) {
         ★
       </button>
       <button className="w-full text-left" onClick={() => launch(tool)}>
-        <span
-          className={`mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br text-xs font-black text-zinc-950 ${tool.accent}`}
-        >
-          {tool.icon}
-        </span>
+        <BrandIcon tool={tool} />
         <strong className="block">{tool.name}</strong>
-        <span
-          title={
-            tool.promptUrl
-              ? "Prompt opens in tool"
-              : "Prompt copies before opening"
-          }
-          className="text-xs text-muted"
-        >
-          {tool.promptUrl ? "↗ Deep link" : "⧉ Copy + paste"}
-        </span>
+        {sendsPrompt ? (
+          <span
+            title={
+              tool.promptUrl
+                ? "Prompt opens in tool"
+                : "Prompt copies before opening"
+            }
+            className="text-xs text-muted"
+          >
+            {tool.promptUrl ? "↗ Deep link" : "⧉ Copy + paste"}
+          </span>
+        ) : (
+          <span className="text-xs text-muted">↗ Open</span>
+        )}
       </button>
     </article>
   );
@@ -79,6 +81,10 @@ export default function App() {
     setStoredValue("tools", custom);
     setStoredValue("theme", theme);
   }, [favorites, history, custom, theme]);
+  useEffect(() => {
+    document.body.classList.toggle("theme-dark", theme === "dark");
+    document.body.classList.toggle("theme-light", theme !== "dark");
+  }, [theme]);
   useEffect(() => {
     const fn = (e) => {
       if (e.key === "/" && document.activeElement?.tagName !== "TEXTAREA") {

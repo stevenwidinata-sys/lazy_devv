@@ -10,7 +10,7 @@ export default class ErrorBoundary extends Component {
   render() {
     if (this.state.error) {
       return (
-        <main className="min-h-screen bg-zinc-950 p-8 text-zinc-100">
+        <main className="app-page theme-dark min-h-screen p-8">
           <section className="card mx-auto max-w-lg p-6">
             <h1 className="text-xl font-black">Lazy Dev hit an error</h1>
             <p className="mt-2 text-zinc-400">

@@ -4,6 +4,7 @@ import { isHttpUrl } from "./utils/prompt";
 export default function Sidebar({
   history,
   setPrompt,
+  setHistory,
   custom,
   setCustom,
   setNotice,
@@ -39,12 +40,14 @@ export default function Sidebar({
                 className="min-w-0 flex-1 truncate text-left"
               >
                 <span>{item.text}</span>
-                <span className="ml-2 text-xs">
-                  {new Date(item.id.split("-")[0]).toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </span>
+                {item.createdAt && (
+                  <span className="ml-2 text-xs">
+                    {new Date(item.createdAt).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
+                )}
               </button>
               <button
                 aria-label="Delete prompt"
@@ -59,13 +62,29 @@ export default function Sidebar({
             </div>
           ))
         ) : (
-          <p className="mt-3 text-sm text-zinc-500">
-            Sent prompts appear here.
-          </p>
+          <p className="mt-3 text-sm text-muted">Sent prompts appear here.</p>
         )}
       </section>
       <section className="card p-4">
         <h2 className="font-black">Add custom AI</h2>
+        {custom.map((tool) => (
+          <div
+            key={tool.id}
+            className="mt-3 flex items-center gap-2 text-sm text-muted"
+          >
+            <span className="min-w-0 flex-1 truncate">
+              {tool.name} · {tool.url}
+            </span>
+            <button
+              aria-label={`Remove ${tool.name}`}
+              onClick={() =>
+                setCustom((all) => all.filter((x) => x.id !== tool.id))
+              }
+            >
+              ×
+            </button>
+          </div>
+        ))}
         <form onSubmit={add} className="mt-3 space-y-2">
           <input
             className="control w-full"
@@ -79,7 +98,7 @@ export default function Sidebar({
             value={form.url}
             onChange={(e) => setForm({ ...form, url: e.target.value })}
           />
-          <button className="button w-full bg-zinc-100 text-zinc-950">
+          <button className="button w-full bg-violet-500 text-white">
             Add tool
           </button>
         </form>

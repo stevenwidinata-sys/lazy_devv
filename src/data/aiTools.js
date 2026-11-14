@@ -4,6 +4,8 @@ const chatgptUrl = (prompt) => `https://chatgpt.com/?q=${prompt}`;
 const perplexityUrl = (prompt) =>
   `https://www.perplexity.ai/search?q=${prompt}`;
 const youUrl = (prompt) => `https://you.com/search?q=${prompt}`;
+const claudeUrl = (prompt) => `https://claude.ai/new?q=${prompt}`;
+const googleUrl = (prompt) => `https://www.google.com/search?q=${prompt}`;
 
 export const defaultTools = [
   {
@@ -20,6 +22,7 @@ export const defaultTools = [
     name: "Claude",
     category: "AI",
     url: "https://claude.ai",
+    promptUrl: claudeUrl,
     icon: "CL",
     accent: "from-orange-400 to-amber-500",
   },
@@ -186,6 +189,7 @@ export const defaultTools = [
     name: "Google",
     category: "Search",
     url: "https://www.google.com",
+    promptUrl: googleUrl,
     icon: "G",
     accent: "from-blue-400 to-red-400",
   },

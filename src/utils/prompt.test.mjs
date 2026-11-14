@@ -65,3 +65,22 @@ assert.deepEqual(
 );
 
 console.log("prompt utilities: ok");
+
+import { searchCatalog } from "./catalog.js";
+{
+  const recipes = [
+    {
+      id: "ppt",
+      title: "Build presentation",
+      description: "Draft, design slides.",
+      aliases: [],
+    },
+    { id: "ui", title: "Design UI", description: "Interfaces.", aliases: [] },
+  ];
+  assert.equal(searchCatalog("design", [], recipes)[0].item.id, "ui");
+}
+{
+  const { historyEntry } = await import("./launcher.js");
+  assert.equal(typeof historyEntry("hi").createdAt, "number");
+}
+console.log("search + history: ok");

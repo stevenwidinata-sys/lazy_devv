@@ -2,7 +2,14 @@
 export default {
   content: ['./index.html', './src/**/*.{js,jsx}'],
   theme: {
-    extend: {},
+    extend: {
+      colors: {
+        surface: {
+          2: 'var(--surface-2)',
+          3: 'var(--surface-3)',
+        },
+      },
+    },
   },
   plugins: [],
 }
