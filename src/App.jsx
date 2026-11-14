@@ -12,6 +12,7 @@ import { historyEntry, prepareLaunch } from "./utils/launcher";
 import { appendEnhancers } from "./utils/prompt";
 import { getStoredValue, setStoredValue } from "./utils/storage";
 
+const APP_PREVIEW_COUNT = 8;
 const isPromptTool = (tool) =>
   ["AI", "Search", "Code", "Image", "Custom"].includes(tool.category);
 function Card({ tool, favorite, favoriteTool, launch }) {
@@ -21,7 +22,8 @@ function Card({ tool, favorite, favoriteTool, launch }) {
       <button
         aria-label={`Favorite ${tool.name}`}
         onClick={() => favoriteTool(tool.id)}
-        className={`absolute right-3 top-3 text-lg ${favorite ? "text-amber-300" : "text-muted"}`}
+        aria-pressed={favorite}
+        className={`absolute right-1 top-1 flex h-10 w-10 items-center justify-center rounded-full text-lg hover:bg-surface-2 ${favorite ? "text-amber-300" : "text-muted"}`}
       >
         ★
       </button>
@@ -63,6 +65,8 @@ export default function App() {
   const [notice, setNotice] = useState("");
   const [theme, setTheme] = useState(() => getStoredValue("theme", "dark"));
   const [recipe, setRecipe] = useState(null);
+  const [appCategory, setAppCategory] = useState("All");
+  const [showAllApps, setShowAllApps] = useState(false);
   const tools = [...defaultTools, ...custom];
   const base = template
     ? template.template.replace(
@@ -73,6 +77,15 @@ export default function App() {
   const output = appendEnhancers(base, extras);
   const promptTools = tools.filter(isPromptTool);
   const apps = tools.filter((tool) => !isPromptTool(tool));
+  const appCategories = ["All", ...new Set(apps.map((tool) => tool.category))];
+  const filteredApps =
+    appCategory === "All"
+      ? apps
+      : apps.filter((tool) => tool.category === appCategory);
+  const visibleApps =
+    appCategory === "All" && !showAllApps
+      ? filteredApps.slice(0, APP_PREVIEW_COUNT)
+      : filteredApps;
   const pinned = tools.filter((tool) => favorites.includes(tool.id));
   validateCatalog(defaultTools, recipes);
   useEffect(() => {
@@ -106,26 +119,33 @@ export default function App() {
     );
   const openApp = (tool) =>
     window.open(tool.url, "_blank", "noopener,noreferrer");
-  async function launch(tool) {
+  function launch(tool) {
     if (!output) {
       setNotice("Write a prompt first.");
-      return ref.current?.focus();
+      ref.current?.focus();
+      ref.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
     }
-    const result = await prepareLaunch(tool, output);
+    // Open in the same tick as the click so phone browsers don't block it.
+    const result = prepareLaunch(tool, output);
+    window.open(result.url, "_blank", "noopener,noreferrer");
     setHistory((all) =>
       [historyEntry(output), ...all.filter((x) => x.text !== output)].slice(
         0,
         20,
       ),
     );
-    setNotice(
-      result.mode === "paste"
-        ? `Prompt copied. Paste it into ${tool.name}.`
-        : result.mode === "paste-error"
-          ? "Could not copy prompt."
-          : `Opening ${tool.name}.`,
+    if (result.mode === "deep-link") {
+      setNotice(`Opening ${tool.name}.`);
+      return;
+    }
+    result.copied.then((ok) =>
+      setNotice(
+        ok
+          ? `Prompt copied. Paste it into ${tool.name}.`
+          : "Could not copy prompt. Use the Copy button.",
+      ),
     );
-    window.open(result.url, "_blank", "noopener,noreferrer");
   }
   async function copy() {
     try {
@@ -153,7 +173,7 @@ export default function App() {
       className={`app-page ${theme === "dark" ? "theme-dark" : "theme-light"} min-h-screen`}
     >
       <section className="mx-auto max-w-6xl px-5 py-10">
-        <header className="mb-6 flex justify-between">
+        <header className="mb-6 flex items-start justify-between gap-4">
           <div>
             <p className="text-xs font-black uppercase tracking-[.25em] text-violet-400">
               Lazy Dev
@@ -161,13 +181,24 @@ export default function App() {
             <h1 className="mt-2 text-4xl font-black">One prompt. Every AI.</h1>
           </div>
           <button
-            className="button bg-violet-500 text-white"
+            className="button h-11 min-w-11 shrink-0 bg-violet-500 text-white"
+            aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
           >
-            {theme === "dark" ? "☀ Light" : "◐ Dark"}
+            <span aria-hidden="true">{theme === "dark" ? "☀" : "◐"}</span>
+            <span className="ml-1 hidden sm:inline">
+              {theme === "dark" ? "Light" : "Dark"}
+            </span>
           </button>
         </header>
+        <CommandBar
+          tools={tools}
+          recipes={recipes}
+          onOpenTool={openApp}
+          onOpenRecipe={setRecipe}
+        />
         <PromptComposer
+          inputRef={ref}
           prompt={prompt}
           setPrompt={setPrompt}
           activeTemplate={template}
@@ -197,15 +228,37 @@ export default function App() {
         )}
         <section className="mt-8">
           <h2 className="mb-3 text-lg font-black">Just open app</h2>
-          {grid(apps, openApp)}
+          <div
+            className="no-scrollbar -mx-5 mb-3 flex gap-2 overflow-x-auto px-5 pb-1"
+            role="tablist"
+            aria-label="App categories"
+          >
+            {appCategories.map((category) => (
+              <button
+                key={category}
+                role="tab"
+                aria-selected={appCategory === category}
+                onClick={() => setAppCategory(category)}
+                className={`shrink-0 rounded-full px-4 py-2 text-sm ${appCategory === category ? "bg-violet-500 text-white" : "bg-surface-2"}`}
+              >
+                {category}
+              </button>
+            ))}
+          </div>
+          {grid(visibleApps, openApp)}
+          {appCategory === "All" && filteredApps.length > APP_PREVIEW_COUNT && (
+            <button
+              className="button mt-3 w-full bg-surface-2"
+              aria-expanded={showAllApps}
+              onClick={() => setShowAllApps((open) => !open)}
+            >
+              {showAllApps
+                ? "Show fewer apps"
+                : `Show all ${filteredApps.length} apps`}
+            </button>
+          )}
         </section>
         <div className="mt-8">
-          <CommandBar
-            tools={tools}
-            recipes={recipes}
-            onOpenTool={openApp}
-            onOpenRecipe={setRecipe}
-          />
           <RecipePacks
             recipes={recipes}
             tools={tools}
@@ -224,7 +277,7 @@ export default function App() {
         {notice && (
           <p
             role="status"
-            className="fixed bottom-5 right-5 rounded-xl bg-violet-600 px-4 py-3 text-sm text-white shadow-lg"
+            className="fixed bottom-5 left-5 right-5 rounded-xl text-center sm:left-auto sm:text-left bg-violet-600 px-4 py-3 text-sm text-white shadow-lg"
           >
             {notice}
           </p>

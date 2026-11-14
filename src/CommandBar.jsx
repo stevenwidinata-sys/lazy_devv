@@ -37,7 +37,7 @@ export default function CommandBar({
   }
 
   return (
-    <section className="card mb-8 p-4">
+    <section className="card mb-6 p-4">
       <label className="mb-2 block text-sm font-bold" htmlFor="command-search">
         Open anything
       </label>
@@ -50,7 +50,9 @@ export default function CommandBar({
         }}
         onKeyDown={handleKeyDown}
         className="control w-full"
-        placeholder="Try: youtube, yt, make ppt, design ui, linkedin..."
+        type="search"
+        enterKeyHint="go"
+        placeholder="Open an app or task: youtube, make ppt, design ui..."
         aria-controls="command-results"
         aria-activedescendant={
           results[activeIndex] ? `command-result-${activeIndex}` : undefined

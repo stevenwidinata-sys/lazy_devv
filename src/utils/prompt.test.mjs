@@ -38,23 +38,34 @@ assert.throws(
   /Unknown/,
 );
 const writes = [];
-assert.deepEqual(
-  await prepareLaunch({ url: "https://site.test" }, "prompt", {
+{
+  const result = prepareLaunch({ url: "https://site.test" }, "prompt", {
     writeText: async (text) => writes.push(text),
-  }),
-  { url: "https://site.test", mode: "paste" },
-);
-assert.deepEqual(writes, ["prompt"]);
-assert.deepEqual(
-  await prepareLaunch({ url: "https://site.test" }, "prompt", {
+  });
+  assert.equal(result.url, "https://site.test");
+  assert.equal(result.mode, "paste");
+  assert.equal(await result.copied, true);
+  assert.deepEqual(writes, ["prompt"]);
+}
+{
+  const result = prepareLaunch({ url: "https://site.test" }, "prompt", {
     writeText: async () => {
       throw new Error("blocked");
     },
-  }),
-  { url: "https://site.test", mode: "paste-error" },
-);
+  });
+  assert.equal(await result.copied, false);
+}
+{
+  // No clipboard API at all (e.g. insecure context) must not throw.
+  const result = prepareLaunch(
+    { url: "https://site.test" },
+    "prompt",
+    undefined,
+  );
+  assert.equal(await result.copied, false);
+}
 assert.deepEqual(
-  await prepareLaunch(
+  prepareLaunch(
     {
       url: "https://site.test",
       promptUrl: (text) => `https://site.test?q=${text}`,

@@ -1,6 +1,11 @@
 import { appendEnhancers, applyTemplate } from "./utils/prompt";
 
+const hasKeyboard =
+  typeof window !== "undefined" &&
+  window.matchMedia?.("(hover: hover) and (pointer: fine)").matches;
+
 export default function PromptComposer({
+  inputRef,
   prompt,
   setPrompt,
   activeTemplate,
@@ -30,10 +35,13 @@ export default function PromptComposer({
       </label>
       <textarea
         id="prompt"
+        ref={inputRef}
         value={prompt}
         onChange={(e) => setPrompt(e.target.value)}
         rows="4"
-        placeholder="Ask anything... Press / to focus."
+        placeholder={
+          hasKeyboard ? "Ask anything... Press / to focus." : "Ask anything..."
+        }
         className="control w-full"
       />
       <div className="mt-3 flex flex-wrap gap-2">
@@ -41,14 +49,14 @@ export default function PromptComposer({
           <button
             key={template.id}
             onClick={() => setActiveTemplate(template)}
-            className={`rounded-full px-3 py-1 text-sm ${activeTemplate?.id === template.id ? "bg-violet-500 text-white" : "bg-surface-2"}`}
+            className={`rounded-full px-4 py-2 text-sm sm:px-3 sm:py-1 ${activeTemplate?.id === template.id ? "bg-violet-500 text-white" : "bg-surface-2"}`}
           >
             {template.title}
           </button>
         ))}
         {activeTemplate && (
           <button
-            className="rounded-full px-3 py-1 text-sm text-muted"
+            className="rounded-full px-4 py-2 text-sm text-muted sm:px-3 sm:py-1"
             onClick={() => setActiveTemplate(null)}
           >
             Clear template
@@ -57,7 +65,10 @@ export default function PromptComposer({
       </div>
       <div className="mt-4 flex flex-wrap gap-3">
         {enhancers.map((item) => (
-          <label key={item} className="text-sm text-muted">
+          <label
+            key={item}
+            className="flex cursor-pointer items-center gap-2 py-1 text-sm text-muted"
+          >
             <input
               type="checkbox"
               checked={extras.includes(item)}
@@ -68,7 +79,8 @@ export default function PromptComposer({
                     : [...all, item],
                 )
               }
-            />{" "}
+              className="h-4 w-4 accent-violet-500"
+            />
             {item}
           </label>
         ))}
